@@ -1,0 +1,624 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Remote Dev qua Tailscale</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sticky table of contents on the left (desktop), single reading column; code blocks styled as terminal sessions, keys as keycaps */
+:root {
+  --bg: #f5f7f9;
+  --surface: #ffffff;
+  --fg: #17212b;
+  --muted: #5b6875;
+  --line: #dde3e9;
+  --accent: #155e8c;
+  --accent-soft: #e3eef6;
+  --code-bg: #12202c;
+  --code-fg: #dce7f0;
+  --code-dim: #7f97ab;
+  --ok: #1f7a4d;
+  --ok-soft: #e2f3ea;
+  --warn: #9a5a00;
+  --warn-soft: #fbf0dc;
+  --bad: #b3261e;
+  --bad-soft: #fbe6e4;
+  --key-bg: #ffffff;
+  --key-edge: #b8c3cd;
+  --font-body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f161d; --surface: #16212b; --fg: #e3eaf0; --muted: #98a7b5; --line: #263542;
+    --accent: #6fb6e6; --accent-soft: #17303f; --code-bg: #0a1117; --code-fg: #d6e2ec; --code-dim: #6f8597;
+    --ok: #6fcf9b; --ok-soft: #133024; --warn: #e9b35c; --warn-soft: #33270f; --bad: #f2877f; --bad-soft: #3a1714;
+    --key-bg: #1d2a36; --key-edge: #3b4d5e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f161d; --surface: #16212b; --fg: #e3eaf0; --muted: #98a7b5; --line: #263542;
+  --accent: #6fb6e6; --accent-soft: #17303f; --code-bg: #0a1117; --code-fg: #d6e2ec; --code-dim: #6f8597;
+  --ok: #6fcf9b; --ok-soft: #133024; --warn: #e9b35c; --warn-soft: #33270f; --bad: #f2877f; --bad-soft: #3a1714;
+  --key-bg: #1d2a36; --key-edge: #3b4d5e;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  padding-block: 0 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 48px;
+}
+@media (max-width: 860px) { .page { grid-template-columns: minmax(0, 1fr); gap: 0; } .toc { display: none; } }
+
+.toc {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 24px);
+  align-self: start;
+  padding-top: 40px;
+  font-size: 14px;
+}
+.toc p { margin: 0 0 10px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; counter-reset: toc; }
+.toc li { counter-increment: toc; }
+.toc a { color: var(--fg); text-decoration: none; display: flex; gap: 8px; }
+.toc a::before { content: counter(toc); color: var(--muted); font-family: var(--font-mono); font-size: 12px; min-width: 16px; padding-top: 2px; }
+.toc a:hover { color: var(--accent); }
+
+main { min-width: 0; max-width: 760px; }
+
+header.hero { padding: 40px 0 8px; }
+.eyebrow { font-family: var(--font-mono); font-size: 13px; color: var(--accent); margin: 0 0 12px; }
+h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.15; font-weight: 800; letter-spacing: -.02em; margin: 0 0 16px; text-wrap: balance; }
+.lede { font-size: 18px; color: var(--muted); margin: 0 0 24px; max-width: 62ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--muted); padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.meta b { color: var(--fg); font-weight: 600; }
+
+section { padding-top: 40px; }
+h2 { font-size: 26px; line-height: 1.25; font-weight: 700; letter-spacing: -.01em; margin: 0 0 12px; text-wrap: balance; scroll-margin-top: 24px; }
+h3 { font-size: 18px; font-weight: 700; margin: 28px 0 8px; text-wrap: balance; }
+p, li { max-width: 68ch; }
+p { margin: 0 0 14px; }
+ul, ol { margin: 0 0 14px; padding-left: 22px; }
+li { margin-bottom: 4px; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+
+/* Steps: a real sequence, so they are numbered */
+.steps { list-style: none; padding: 0; margin: 20px 0 0; counter-reset: step; display: grid; gap: 28px; }
+.steps > li { counter-increment: step; position: relative; padding-left: 52px; max-width: none; margin: 0; }
+.steps > li::before {
+  content: counter(step);
+  position: absolute; left: 0; top: 0;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent); color: var(--surface);
+  font-weight: 700; font-size: 15px;
+}
+.steps h3 { margin-top: 4px; }
+.who { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+
+/* Terminal-style code */
+.code { position: relative; margin: 10px 0 16px; border-radius: 8px; background: var(--code-bg); min-width: 0; }
+.code .bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 6px 14px; border-bottom: 1px solid rgba(127,151,171,.18); }
+.code .where { font-family: var(--font-mono); font-size: 12px; color: var(--code-dim); }
+.code button {
+  font-family: var(--font-body); font-size: 12px; font-weight: 600;
+  color: var(--code-fg); background: transparent; border: 1px solid rgba(127,151,171,.35);
+  border-radius: 5px; padding: 3px 10px; cursor: pointer;
+}
+.code button:hover { border-color: var(--code-fg); }
+.code pre { margin: 0; padding: 14px; overflow-x: auto; }
+.code pre code { background: none; padding: 0; color: var(--code-fg); font-size: 13.5px; line-height: 1.6; overflow-wrap: normal; white-space: pre; }
+.code .c { color: var(--code-dim); }
+
+/* Callouts */
+.note { border-radius: 8px; padding: 12px 16px; margin: 12px 0 16px; font-size: 15px; }
+.note p:last-child, .note ul:last-child { margin-bottom: 0; }
+.note strong:first-child { display: block; margin-bottom: 2px; }
+.note.info { background: var(--accent-soft); }
+.note.warn { background: var(--warn-soft); }
+.note.warn strong:first-child { color: var(--warn); }
+.note.bad { background: var(--bad-soft); }
+.note.bad strong:first-child { color: var(--bad); }
+.note.ok { background: var(--ok-soft); }
+.note.ok strong:first-child { color: var(--ok); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin: 12px 0 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+
+/* Keycaps */
+kbd {
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
+  display: inline-block; min-width: 22px; text-align: center;
+  padding: 1px 7px; border-radius: 5px;
+  background: var(--key-bg); color: var(--fg);
+  border: 1px solid var(--key-edge); border-bottom-width: 2px;
+  white-space: nowrap;
+}
+.then { color: var(--muted); padding: 0 4px; }
+
+/* Architecture diagram */
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 18px 0 8px; }
+.flow .node { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; position: relative; min-width: 0; }
+.flow .node b { display: block; font-size: 14px; margin-bottom: 2px; }
+.flow .node span { display: block; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.flow .node.key { border-color: var(--accent); }
+.flow .node:not(:last-child)::after {
+  content: "→"; position: absolute; right: -10px; top: 50%; transform: translate(50%, -50%);
+  color: var(--accent); font-weight: 700; z-index: 1;
+}
+.flow-caption { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+@media (max-width: 640px) {
+  .flow { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .flow .node:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -9px; transform: translate(50%, 50%); }
+}
+
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="page">
+  <nav class="toc" aria-label="Mục lục">
+    <p>Mục lục</p>
+    <ol>
+      <li><a href="#tong-quan">Mô hình hoạt động</a></li>
+      <li><a href="#vi-sao">Vì sao không dùng OpenSSH</a></li>
+      <li><a href="#chuan-bi">Chuẩn bị</a></li>
+      <li><a href="#tu-dong">Cài tự động bằng Claude</a></li>
+      <li><a href="#cai-dat">Cài đặt từng bước</a></li>
+      <li><a href="#hang-ngay">Dùng hằng ngày</a></li>
+      <li><a href="#herdr">Herdr cơ bản</a></li>
+      <li><a href="#luu-y">Làm việc trên ổ Windows</a></li>
+      <li><a href="#su-co">Xử lý sự cố</a></li>
+      <li><a href="#bao-mat">Bảo mật</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">ssh &lt;linux-user&gt;@&lt;ten-may&gt;-wsl</p>
+      <h1>Điều khiển Claude Code trên máy công ty từ điện thoại</h1>
+      <p class="lede">Hướng dẫn dựng lối vào từ xa cho máy dev Windows: SSH từ iPhone hoặc laptop vào máy, mở herdr và tiếp tục các phiên Claude Code đang chạy, trên đúng thư mục dự án và đúng tài khoản Windows của bạn.</p>
+      <div class="meta">
+        <span><b>Áp dụng cho</b> Windows 10/11, máy join Azure AD (Entra ID)</span>
+        <span><b>Thời gian</b> khoảng 30 phút</span>
+        <span><b>Công cụ</b> WSL, Tailscale, Termius, herdr</span>
+      </div>
+    </header>
+
+    <section id="tong-quan">
+      <h2>Mô hình hoạt động</h2>
+      <p>Điện thoại và máy dev cùng nằm trong một mạng riêng Tailscale. Bạn SSH vào một Ubuntu chạy trong WSL. Từ đó, <code>herdr</code> và <code>claude</code> gọi thẳng bản Windows, nên chạy dưới tài khoản Windows của bạn và dùng chung cấu hình, memory, phiên đăng nhập với lúc ngồi trước máy.</p>
+      <div class="flow" role="img" aria-label="Điện thoại qua Tailscale vào WSL Ubuntu, gọi herdr và Claude bản Windows, làm việc trên thư mục dự án ở ổ D">
+        <div class="node"><b>Điện thoại</b><span>Termius + app Tailscale</span></div>
+        <div class="node"><b>Tailscale</b><span>Mạng riêng, chỉ thiết bị của bạn</span></div>
+        <div class="node key"><b>WSL Ubuntu</b><span>Tailscale SSH, không cần sshd hay key</span></div>
+        <div class="node"><b>herdr.exe, claude.exe</b><span>Chạy dưới tài khoản Windows, mở code ở <code>/mnt/d/…</code></span></div>
+      </div>
+      <p class="flow-caption">Chương trình Windows gọi từ WSL chạy dưới chính tài khoản đã đăng nhập Windows, nên không cần tạo tài khoản phụ.</p>
+    </section>
+
+    <section id="vi-sao">
+      <h2>Vì sao không dùng OpenSSH của Windows</h2>
+      <p>Cách hiển nhiên là bật OpenSSH Server có sẵn trong Windows. Trên máy join Azure AD, cách này không đăng nhập được bằng tài khoản công ty. Chúng tôi đã thử cả bản 9.5 có sẵn và bản 10.0 mới nhất:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cách đăng nhập</th><th>Kết quả</th></tr></thead>
+          <tbody>
+            <tr><td>Key, user <code>azuread\ten</code></td><td>Key được chấp nhận rồi treo khi mở phiên. Sau đó mọi lần đăng nhập vào user này đều treo cho tới khi <b>khởi động lại máy</b>.</td></tr>
+            <tr><td>Mật khẩu, user <code>azuread\ten.ho@congty.vn</code></td><td>Bị từ chối dù mật khẩu đúng. Windows báo lỗi xác định tài khoản Azure AD (<code>0xC004844C</code>).</td></tr>
+            <tr><td>User <code>ten.ho@congty.vn</code></td><td>sshd báo user không tồn tại.</td></tr>
+            <tr><td>Tạo user Windows cục bộ riêng</td><td>Đăng nhập được, nhưng là profile khác: không thấy các phiên Claude và herdr đang chạy, phải đăng nhập lại mọi thứ.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note bad">
+        <strong>Không thêm SSH key cho tài khoản Azure AD</strong>
+        <p>Nếu đã lỡ bật OpenSSH của Windows, đừng bỏ key vào <code>C:\ProgramData\ssh\administrators_authorized_keys</code>. File này áp dụng cho mọi tài khoản admin, kể cả tài khoản Azure AD. Một lần đăng nhập bằng key là đủ làm máy treo SSH tới lần khởi động lại.</p>
+      </div>
+    </section>
+
+    <section id="chuan-bi">
+      <h2>Chuẩn bị</h2>
+      <ul>
+        <li>Máy dev Windows 10 (22H2) hoặc Windows 11, có quyền admin để bấm UAC.</li>
+        <li>Một tài khoản Tailscale. Đăng nhập <b>cùng một tài khoản</b> trên máy dev và điện thoại.</li>
+        <li>Điện thoại cài <b>Tailscale</b> và <b>Termius</b> (hoặc app SSH khác).</li>
+        <li>Claude Code và herdr đã cài trên Windows, dùng bình thường khi ngồi trước máy.</li>
+      </ul>
+      <p>Trong hướng dẫn, thay các chỗ đánh dấu bằng giá trị của bạn:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Chỗ đánh dấu</th><th>Ý nghĩa</th><th>Ví dụ</th></tr></thead>
+          <tbody>
+            <tr><td><code>&lt;ten-may&gt;</code></td><td>Tên ngắn cho máy, dùng làm tên trong Tailscale</td><td><code>an-nguyen</code></td></tr>
+            <tr><td><code>&lt;linux-user&gt;</code></td><td>User Linux bạn tạo trong Ubuntu</td><td><code>an</code></td></tr>
+            <tr><td><code>&lt;WINDOWS_USER&gt;</code></td><td>Tên thư mục của bạn trong <code>C:\Users\</code></td><td><code>AnNguyen</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tu-dong">
+      <h2>Cài tự động bằng Claude</h2>
+      <p>Cách nhanh nhất: mở Claude Code <b>trên chính máy cần cài</b> (terminal Windows, hoặc VS Code), dán prompt dưới đây, điền 3 dòng đầu. Claude tự làm các bước ở mục sau, kiểm tra kết quả từng bước, và chỉ dừng lại khi cần bạn thao tác.</p>
+      <div class="note info">
+        <strong>Bạn vẫn phải tự làm 3 việc</strong>
+        <ul>
+          <li>Bấm <b>Yes</b> ở hộp thoại UAC khi Claude báo (cập nhật WSL, tạo scheduled task).</li>
+          <li>Mở link đăng nhập Tailscale mà Claude đưa ra, để thêm máy WSL vào tailnet.</li>
+          <li>Trên điện thoại: cài Tailscale, Termius, và nhập thông tin host mà Claude báo ở cuối.</li>
+        </ul>
+      </div>
+      <div class="code"><div class="bar"><span class="where">Prompt cho Claude Code</span><button type="button">Sao chép</button></div><pre><code>Hãy dựng lối vào SSH từ xa cho máy Windows này theo mô hình:
+điện thoại → Tailscale → WSL Ubuntu (Tailscale SSH) → herdr.exe / claude.exe bản Windows.
+Làm từng bước, in kết quả kiểm tra sau mỗi bước, dừng lại hỏi tôi khi cần tôi thao tác.
+
+THÔNG TIN (để trống thì dùng mặc định trong ngoặc):
+- Thư mục dự án mở sẵn khi đăng nhập: ______ (bắt buộc, hỏi tôi nếu trống)
+- Tên máy trong Tailscale: ______ (tên máy Windows viết thường + "-wsl")
+- User Linux: ______ (tên user Windows viết thường, bỏ ký tự đặc biệt)
+
+QUY TẮC BẮT BUỘC:
+1. KHÔNG bật hay cấu hình OpenSSH Server của Windows. KHÔNG thêm key vào
+   C:\ProgramData\ssh\administrators_authorized_keys. Máy join Azure AD:
+   đăng nhập SSH bằng key làm treo dịch vụ đăng nhập Windows tới khi khởi động lại,
+   đăng nhập bằng mật khẩu thì bị từ chối (0xC004844C).
+2. Lệnh cần quyền admin: chạy qua Start-Process -Verb RunAs, báo tôi trước để bấm UAC,
+   gom nhiều thao tác admin vào một lần.
+3. Không truyền script nhiều dòng qua `wsl -- bash -c "..."` từ PowerShell (hỏng quoting).
+   Ghi script ra file với xuống dòng LF, rồi chạy: wsl -d Ubuntu -u root -- bash /mnt/c/...
+4. Không đoán. Mỗi bước phải có lệnh kiểm tra và in kết quả.
+
+CÁC BƯỚC:
+A. Hiện trạng: wsl --version, wsl -l -v, tailscale status (Windows),
+   Get-Command herdr, Get-Command claude -All.
+   Tailscale trên Windows chưa cài hoặc chưa đăng nhập: dừng, nhờ tôi cài từ
+   https://tailscale.com/download. herdr chưa cài: cài bằng
+   powershell -ExecutionPolicy Bypass -c "irm https://herdr.dev/install.ps1 | iex"
+B. WSL: wsl --update (admin). Chưa có distro Ubuntu: wsl --install -d Ubuntu --no-launch,
+   rồi ubuntu.exe install --root. Gặp Wsl/Service/E_UNEXPECTED: wsl --shutdown,
+   Restart-Service WslService, wsl --update, thử lại.
+   Xác nhận: wsl -d Ubuntu -u root -- whoami  ==&gt; root
+C. Trong Ubuntu (root): useradd -m -s /bin/bash -G sudo &lt;user&gt;; passwd -l &lt;user&gt;;
+   /etc/sudoers.d/&lt;user&gt; với "&lt;user&gt; ALL=(ALL) NOPASSWD:ALL" (chmod 440);
+   /etc/wsl.conf gồm [boot] systemd=true và [user] default=&lt;user&gt;.
+   wsl --terminate Ubuntu, rồi xác nhận systemctl is-system-running (running hoặc degraded).
+D. Tailscale trong WSL:
+   curl -fsSL https://tailscale.com/install.sh | sh
+   systemctl enable --now tailscaled
+   nohup tailscale up --ssh --hostname=&lt;ten-may&gt; &gt; /tmp/ts-up.log 2&gt;&amp;1 &amp;
+   Đọc link https://login.tailscale.com/a/... trong /tmp/ts-up.log, đưa tôi mở,
+   chờ tôi xác nhận. Kiểm tra: tailscale status thấy máy mới; ghi lại tailscale ip -4.
+E. Giữ WSL chạy: Register-ScheduledTask tên 'WSL Ubuntu keepalive (Tailscale SSH)',
+   trigger AtLogOn cho user hiện tại, action
+   conhost.exe --headless wsl.exe -d Ubuntu --exec sleep infinity,
+   ExecutionTimeLimit = 0, AllowStartIfOnBatteries. Rồi Start-ScheduledTask.
+F. ~/.bashrc của user Linux: xoá khối cũ nếu có, thêm khối mở đầu bằng dòng
+   "# --- Remote dev via Tailscale SSH ---" gồm:
+   - Nếu không có cmd.exe trong PATH: nạp PATH Windows bằng
+     $(cd /mnt/c &amp;&amp; /mnt/c/Windows/System32/cmd.exe /d /c 'echo %PATH%' | tr -d '\r'),
+     tách theo ';', wslpath -u từng mục, chỉ thêm thư mục tồn tại.
+     (Phiên Tailscale SSH do systemd tạo, không qua wsl.exe nên thiếu PATH Windows.)
+   - alias herdr='herdr.exe'
+   - alias claude trỏ tới bản Windows: Claude cài bằng npm thì là
+     /mnt/c/Users/&lt;WinUser&gt;/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+     (đọc trường "bin" trong package.json để xác nhận); có claude.exe trên PATH thì
+     alias claude='claude.exe'.
+   - Shell tương tác đang đứng ở $HOME thì cd tới thư mục dự án (dạng /mnt/d/...).
+G. Kiểm tra cuối, chạy từ Windows qua đúng đường Tailscale SSH:
+   ssh -tt -o BatchMode=yes -o StrictHostKeyChecking=no &lt;user&gt;@&lt;ip-wsl&gt; "bash -li &lt;file-test&gt;"
+   File test (LF) bắt đầu bằng shopt -s expand_aliases, rồi in: PWD,
+   cmd.exe /d /c whoami (phải là tài khoản Windows của tôi), command -v herdr.exe,
+   claude --version, herdr status.
+   Nếu ra "Tailscale SSH requires an additional check" kèm link: đưa link cho tôi mở, chạy lại.
+H. Báo cáo: bảng từng bước và kết quả; thông tin nhập Termius (Hostname, Port 22,
+   Username, không key và không mật khẩu). Nhắc tôi bật app Tailscale trên điện thoại
+   cùng tài khoản, và chế độ "check" sẽ định kỳ hỏi mở link xác nhận.</code></pre></div>
+      <p>Nếu Claude dừng giữa chừng hoặc gặp lỗi lạ, đối chiếu với các bước tay ở mục dưới và bảng <a href="#su-co">Xử lý sự cố</a>.</p>
+    </section>
+
+    <section id="cai-dat">
+      <h2>Cài đặt từng bước</h2>
+      <p>Các bước dưới đây là những gì prompt ở trên tự làm. Dùng khi muốn tự làm tay, hoặc để hiểu Claude đang làm gì.</p>
+      <ol class="steps">
+        <li>
+          <p class="who">Trên Windows và điện thoại</p>
+          <h3>Cài Tailscale và đăng nhập</h3>
+          <p>Tải Tailscale cho Windows tại <a href="https://tailscale.com/download" target="_blank" rel="noopener">tailscale.com/download</a>, cài app Tailscale trên điện thoại, đăng nhập cùng một tài khoản ở cả hai nơi. Bật Tailscale trên điện thoại.</p>
+        </li>
+
+        <li>
+          <p class="who">PowerShell trên Windows</p>
+          <h3>Cập nhật WSL và cài Ubuntu</h3>
+          <p>Cập nhật WSL trước. Bản cũ (ví dụ 2.3.x) có thể báo <code>Wsl/Service/E_UNEXPECTED</code> khi mở Ubuntu.</p>
+          <div class="code"><div class="bar"><span class="where">PowerShell</span><button type="button">Sao chép</button></div><pre><code>wsl --update
+wsl --install -d Ubuntu</code></pre></div>
+          <p>Ubuntu mở ra và hỏi tạo user. Nhập <code>&lt;linux-user&gt;</code> và một mật khẩu (dùng khi chạy <code>sudo</code>).</p>
+        </li>
+
+        <li>
+          <p class="who">Trong Ubuntu</p>
+          <h3>Bật systemd</h3>
+          <p>Tailscale trong WSL cần systemd để tự chạy.</p>
+          <div class="code"><div class="bar"><span class="where">bash · Ubuntu</span><button type="button">Sao chép</button></div><pre><code>sudo tee /etc/wsl.conf &gt;/dev/null &lt;&lt;'EOF'
+[boot]
+systemd=true
+
+[user]
+default=&lt;linux-user&gt;
+EOF</code></pre></div>
+          <p>Khởi động lại WSL từ PowerShell, rồi mở lại Ubuntu:</p>
+          <div class="code"><div class="bar"><span class="where">PowerShell</span><button type="button">Sao chép</button></div><pre><code>wsl --shutdown
+wsl -d Ubuntu</code></pre></div>
+        </li>
+
+        <li>
+          <p class="who">Trong Ubuntu</p>
+          <h3>Cài Tailscale trong WSL và bật Tailscale SSH</h3>
+          <p>WSL trên Windows 10 dùng mạng riêng (NAT), nên Tailscale phải chạy <b>bên trong</b> Ubuntu. WSL sẽ là một máy riêng trong tailnet, tên <code>&lt;ten-may&gt;-wsl</code>.</p>
+          <div class="code"><div class="bar"><span class="where">bash · Ubuntu</span><button type="button">Sao chép</button></div><pre><code>curl -fsSL https://tailscale.com/install.sh | sh
+sudo systemctl enable --now tailscaled
+sudo tailscale up --ssh --hostname=&lt;ten-may&gt;-wsl</code></pre></div>
+          <p>Lệnh cuối in ra một link <code>https://login.tailscale.com/a/…</code>. Mở link, đăng nhập đúng tài khoản Tailscale ở bước 1. Kiểm tra:</p>
+          <div class="code"><div class="bar"><span class="where">bash · Ubuntu</span><button type="button">Sao chép</button></div><pre><code>tailscale status   <span class="c"># phải thấy &lt;ten-may&gt;-wsl, máy Windows và điện thoại</span></code></pre></div>
+        </li>
+
+        <li>
+          <p class="who">PowerShell trên Windows</p>
+          <h3>Giữ WSL chạy nền sau khi đăng nhập</h3>
+          <p>WSL tự tắt khi không có gì chạy, và khi đó máy <code>&lt;ten-may&gt;-wsl</code> biến khỏi tailnet. Tạo một scheduled task chạy ẩn mỗi khi bạn đăng nhập Windows:</p>
+          <div class="code"><div class="bar"><span class="where">PowerShell</span><button type="button">Sao chép</button></div><pre><code>$a = New-ScheduledTaskAction -Execute "$env:WINDIR\System32\conhost.exe" -Argument '--headless wsl.exe -d Ubuntu --exec sleep infinity'
+$t = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+$s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -StartWhenAvailable
+Register-ScheduledTask -TaskName 'WSL Ubuntu keepalive (Tailscale SSH)' -Action $a -Trigger $t -Settings $s -Force
+Start-ScheduledTask -TaskName 'WSL Ubuntu keepalive (Tailscale SSH)'</code></pre></div>
+          <div class="note warn">
+            <strong>Chỉ dùng được khi đã đăng nhập Windows</strong>
+            <p>Máy vừa khởi động mà chưa ai đăng nhập thì WSL chưa chạy. Khóa màn hình (<kbd>Win</kbd> + <kbd>L</kbd>) thì vẫn dùng được.</p>
+          </div>
+        </li>
+
+        <li>
+          <p class="who">Trong Ubuntu</p>
+          <h3>Nối herdr và Claude bản Windows vào shell</h3>
+          <p>Phiên Tailscale SSH không có biến PATH của Windows, nên gõ <code>herdr</code> sẽ báo <code>command not found</code>. Đoạn dưới nạp lại PATH của Windows mỗi lần đăng nhập, trỏ <code>herdr</code> và <code>claude</code> sang bản Windows, và mở sẵn thư mục dự án.</p>
+          <div class="code"><div class="bar"><span class="where">bash · Ubuntu</span><button type="button">Sao chép</button></div><pre><code>cat &gt;&gt; ~/.bashrc &lt;&lt;'EOF'
+
+# --- Remote dev via Tailscale SSH ---
+# Tailscale SSH sessions are spawned by systemd, not wsl.exe, so the Windows PATH is missing.
+if ! command -v cmd.exe &gt;/dev/null 2&gt;&amp;1 &amp;&amp; [ -x /mnt/c/Windows/System32/cmd.exe ]; then
+  _winpath=$(cd /mnt/c &amp;&amp; /mnt/c/Windows/System32/cmd.exe /d /c 'echo %PATH%' 2&gt;/dev/null | tr -d '\r')
+  IFS=';' read -ra _parts &lt;&lt;&lt; "$_winpath"
+  for _p in "${_parts[@]}"; do
+    [ -n "$_p" ] &amp;&amp; _u=$(wslpath -u "$_p" 2&gt;/dev/null) &amp;&amp; [ -d "$_u" ] &amp;&amp; PATH="$PATH:$_u"
+  done
+  export PATH
+  unset _winpath _parts _p _u
+fi
+# Windows herdr/claude: run as your Windows account, share its config and running sessions
+alias herdr='herdr.exe'
+alias claude='/mnt/c/Users/&lt;WINDOWS_USER&gt;/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe'
+# Start in the main working folder on interactive login
+if [[ $- == *i* ]] &amp;&amp; [[ "$PWD" == "$HOME" ]]; then cd /mnt/d/duong/dan/du-an; fi
+EOF</code></pre></div>
+          <ul>
+            <li>Thay <code>&lt;WINDOWS_USER&gt;</code> và đường dẫn dự án trong dòng <code>cd</code>. Ổ <code>D:\</code> trong WSL là <code>/mnt/d/</code>.</li>
+            <li>Đường dẫn <code>claude</code> ở trên dành cho Claude Code <b>cài bằng npm</b>. Nếu bạn cài bằng bộ cài riêng của Claude (có file <code>%USERPROFILE%\.local\bin\claude.exe</code>), đổi dòng đó thành <code>alias claude='claude.exe'</code>.</li>
+            <li>Không biết cài kiểu nào: mở PowerShell, gõ <code>Get-Command claude -All</code>.</li>
+          </ul>
+        </li>
+
+        <li>
+          <p class="who">Trang quản trị Tailscale, tùy chọn</p>
+          <h3>Bỏ bước xác nhận lại định kỳ</h3>
+          <p>Mặc định Tailscale SSH ở chế độ <code>check</code>: định kỳ (thường 12 giờ) Termius hiện "Complete additional check" kèm link, bạn mở link để xác nhận là vào được. Nếu tailnet chỉ có thiết bị của riêng bạn, có thể tắt bước này:</p>
+          <p>Vào <a href="https://login.tailscale.com/admin/acls" target="_blank" rel="noopener">login.tailscale.com/admin/acls</a>, trong khối <code>"ssh"</code> đổi <code>"action": "check"</code> thành <code>"action": "accept"</code>, rồi Save.</p>
+          <div class="note info">
+            <strong>Tailnet dùng chung của công ty</strong>
+            <p>Nếu team dùng chung một tailnet thì để admin quyết định chính sách này, và giữ <code>autogroup:self</code> để mỗi người chỉ vào được máy của mình.</p>
+          </div>
+        </li>
+
+        <li>
+          <p class="who">Trên điện thoại</p>
+          <h3>Thêm host trong Termius</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Trường</th><th>Giá trị</th></tr></thead>
+              <tbody>
+                <tr><td>Hostname</td><td><code>&lt;ten-may&gt;-wsl</code>, hoặc IP <code>100.x.x.x</code> lấy từ <code>tailscale ip -4</code></td></tr>
+                <tr><td>Port</td><td><code>22</code></td></tr>
+                <tr><td>Username</td><td><code>&lt;linux-user&gt;</code></td></tr>
+                <tr><td>Password / Key</td><td>Để trống. Tailscale xác thực theo thiết bị.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Kết nối. Nếu hiện "Complete additional check", chạm vào link và đăng nhập Tailscale.</p>
+          <div class="note ok">
+            <strong>Kiểm tra nhanh sau khi vào</strong>
+            <p>Gõ <code>cmd.exe /c whoami</code>: kết quả phải là tài khoản Windows của bạn (ví dụ <code>azuread\annguyen</code>). Gõ <code>claude --version</code> và <code>herdr status</code> để chắc cả hai đã chạy được.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="hang-ngay">
+      <h2>Dùng hằng ngày</h2>
+      <div class="code"><div class="bar"><span class="where">Termius → &lt;ten-may&gt;-wsl</span><button type="button">Sao chép</button></div><pre><code>herdr        <span class="c"># mở herdr, hoặc vào lại phiên đang chạy</span>
+claude       <span class="c"># gõ trong một pane: herdr tự nhận ra agent</span></code></pre></div>
+      <p>Xong việc, rời đi mà <b>vẫn giữ Claude chạy</b>: bấm <kbd>Ctrl</kbd>+<kbd>b</kbd>, thả tay, bấm <kbd>q</kbd>. Đóng hẳn Termius cũng được. Lần sau SSH vào, gõ <code>herdr</code> là thấy lại đúng trạng thái cũ.</p>
+      <p>Ngồi lại trước máy thì mở terminal Windows, gõ <code>herdr</code>: cùng một server, cùng các phiên.</p>
+    </section>
+
+    <section id="herdr">
+      <h2>Herdr cơ bản</h2>
+      <p>Herdr giống tmux nhưng làm riêng cho AI agent. Một server chạy nền giữ các terminal, nên ngắt kết nối không làm dừng Claude. Sidebar cho biết agent nào đang chạy, xong, hay đang chờ bạn trả lời.</p>
+
+      <h3>Khái niệm</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Khái niệm</th><th>Ý nghĩa</th></tr></thead>
+          <tbody>
+            <tr><td>Workspace</td><td>Mỗi dự án hoặc mỗi việc một workspace.</td></tr>
+            <tr><td>Tab</td><td>Các màn hình khác nhau trong một workspace, ví dụ <code>agents</code>, <code>logs</code>.</td></tr>
+            <tr><td>Pane</td><td>Một terminal thật. Có thể chia đôi, vẫn chạy khi bạn ngắt kết nối.</td></tr>
+            <tr><td>Trạng thái agent</td><td><code>working</code> đang chạy · <code>blocked</code> <b>đang chờ bạn</b> · <code>done</code> xong · <code>idle</code> rảnh</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Phím tắt</h3>
+      <p>Mọi lệnh bắt đầu bằng prefix <kbd>Ctrl</kbd>+<kbd>b</kbd>: bấm, <b>thả tay</b>, rồi bấm phím lệnh. Bảng dưới là phím mặc định của herdr 0.9.5.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Việc</th><th>Phím</th></tr></thead>
+          <tbody>
+            <tr><td>Xem toàn bộ phím tắt</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>?</kbd></td></tr>
+            <tr><td>Rời đi, giữ phiên chạy</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>q</kbd></td></tr>
+            <tr><td>Tab mới</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>c</kbd></td></tr>
+            <tr><td>Tab sau / trước</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>n</kbd> / <kbd>p</kbd></td></tr>
+            <tr><td>Nhảy tới tab 1–9</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>1</kbd>…<kbd>9</kbd></td></tr>
+            <tr><td>Chia pane sang phải / xuống dưới</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>v</kbd> / <kbd>-</kbd></td></tr>
+            <tr><td>Chuyển pane</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>Tab</kbd>, hoặc <kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd></td></tr>
+            <tr><td>Phóng to / thu nhỏ pane</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>z</kbd></td></tr>
+            <tr><td>Đóng pane</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>x</kbd></td></tr>
+            <tr><td>Chọn workspace</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>w</kbd></td></tr>
+            <tr><td>Workspace mới</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>Shift</kbd>+<kbd>n</kbd></td></tr>
+            <tr><td>Ẩn / hiện sidebar</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>b</kbd></td></tr>
+            <tr><td>Nhảy tới agent đang có thông báo</td><td><kbd>Ctrl</kbd>+<kbd>b</kbd><span class="then">rồi</span><kbd>o</kbd></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Dán ảnh cho Claude</h3>
+      <p>Khi ngồi trước máy Windows, Claude chạy trong herdr đọc thẳng clipboard Windows (cùng máy, cùng tài khoản), nên không cần cài thêm gì.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Bước</th><th>Thao tác</th></tr></thead>
+          <tbody>
+            <tr><td>Chụp hoặc copy ảnh</td><td><kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> để chụp một vùng, hoặc copy ảnh từ trình duyệt, Teams…</td></tr>
+            <tr><td>Chọn pane đang chạy <code>claude</code></td><td>Click vào pane đó</td></tr>
+            <tr><td>Dán</td><td><kbd>Alt</kbd>+<kbd>V</kbd>. Ô nhập hiện <code>[Image #1]</code> là được.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li>Không dùng <kbd>Ctrl</kbd>+<kbd>V</kbd>: trên Windows phím này bị terminal giữ để dán chữ, clipboard chứa ảnh thì không ra gì.</li>
+        <li>Cách thay thế: kéo thả file ảnh từ Explorer vào cửa sổ terminal (dán đường dẫn), hoặc gõ đường dẫn trong câu hỏi, ví dụ <code>xem ảnh D:\tmp\loi.png</code>.</li>
+        <li>Trong herdr mà <kbd>Alt</kbd>+<kbd>V</kbd> không ra gì, trong khi ngoài herdr lại được: kiểm tra <code>%APPDATA%\herdr\config.toml</code> có phím tắt nào gán <code>alt+v</code> không.</li>
+      </ul>
+      <div class="note warn">
+        <strong>Từ điện thoại qua Termius thì không dán ảnh được</strong>
+        <p>SSH qua terminal chỉ truyền chữ. Tính năng chuyển ảnh của herdr chỉ có khi máy bên kia cũng cài herdr và kết nối bằng <code>herdr --remote</code>. Cần gửi ảnh từ điện thoại thì lưu ảnh vào thư mục đồng bộ (OneDrive…) trên máy dev rồi đưa đường dẫn cho Claude.</p>
+      </div>
+
+      <h3>Trên điện thoại</h3>
+      <ul>
+        <li>Phím <kbd>Ctrl</kbd> nằm trên thanh phím phụ phía trên bàn phím Termius.</li>
+        <li>Màn hình hẹp: hạn chế chia pane, nên để <b>mỗi agent một tab</b> và dùng <kbd>z</kbd> để phóng to pane đang xem.</li>
+        <li>Ẩn sidebar cho rộng chỗ, mở lại khi cần xem agent nào đang <code>blocked</code>.</li>
+      </ul>
+
+      <h3>Lệnh ngoài giao diện</h3>
+      <div class="code"><div class="bar"><span class="where">bash</span><button type="button">Sao chép</button></div><pre><code>herdr status                      <span class="c"># server có đang chạy không</span>
+herdr agent list                  <span class="c"># các agent và trạng thái</span>
+herdr integration install claude  <span class="c"># tùy chọn: khôi phục phiên Claude</span>
+herdr server stop                 <span class="c"># tắt hẳn server, MẤT các phiên đang chạy</span></code></pre></div>
+      <p>Cấu hình phím tắt và giao diện ở <code>%APPDATA%\herdr\config.toml</code>. Sửa xong chạy <code>herdr server reload-config</code>. Tài liệu đầy đủ: <a href="https://herdr.dev/docs/" target="_blank" rel="noopener">herdr.dev/docs</a>.</p>
+    </section>
+
+    <section id="luu-y">
+      <h2>Làm việc trên ổ Windows</h2>
+      <p>Code vẫn nằm trên ổ Windows và mở được từ WSL qua <code>/mnt/d/…</code>. File tạo hoặc sửa từ WSL vẫn thuộc tài khoản Windows của bạn. Một vài điểm cần nhớ:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Việc</th><th>Nên làm</th></tr></thead>
+          <tbody>
+            <tr><td><code>npm</code>, <code>node</code>, <code>dotnet</code></td><td>Dùng bản Windows: <code>npm.cmd</code>, <code>node.exe</code>, <code>dotnet.exe</code>, hoặc <code>cmd.exe /c npm run …</code>. Bản Linux sẽ hỏng với <code>node_modules</code> và <code>bin/obj</code> build trên Windows.</td></tr>
+            <tr><td><code>git</code></td><td>Dùng <code>git.exe</code>. <code>git</code> bản Linux có thể báo hàng loạt file thay đổi do quyền file và ký tự xuống dòng CRLF.</td></tr>
+            <tr><td>Tốc độ</td><td>Đọc/ghi ổ Windows từ Linux chậm hơn vài lần. Lệnh nặng (cài package, build) chạy bằng bản <code>.exe</code>.</td></tr>
+            <tr><td>Tên thư mục</td><td>Linux phân biệt chữ hoa/thường, Windows thì không. Gõ đúng chính tả.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Thông thường bạn chỉ cần <code>herdr</code> và <code>claude</code>. Claude chạy bản Windows nên tự dùng đúng công cụ Windows.</p>
+    </section>
+
+    <section id="su-co">
+      <h2>Xử lý sự cố</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách xử lý</th></tr></thead>
+          <tbody>
+            <tr><td><code>herdr: command not found</code></td><td>Phiên SSH thiếu PATH Windows</td><td>Làm lại bước 6. Đăng xuất rồi SSH vào lại.</td></tr>
+            <tr><td>Termius đứng ở "Complete additional check"</td><td>Tailscale SSH đang ở chế độ <code>check</code></td><td>Chạm vào link trong khung, đăng nhập Tailscale. Hoặc làm bước 7.</td></tr>
+            <tr><td>Termius không thấy <code>&lt;ten-may&gt;-wsl</code></td><td>WSL không chạy, hoặc app Tailscale trên điện thoại đang tắt</td><td>Bật Tailscale trên điện thoại. Kiểm tra task ở bước 5 đang <code>Running</code>, máy đang đăng nhập Windows.</td></tr>
+            <tr><td><code>Wsl/Service/E_UNEXPECTED</code></td><td>WSL bản cũ</td><td><code>wsl --update</code> (PowerShell admin), rồi <code>wsl --shutdown</code>.</td></tr>
+            <tr><td><code>herdr status</code> báo <code>not running</code></td><td>Server herdr đã tắt, thường sau khi khởi động lại máy</td><td>Gõ <code>herdr</code> để tạo server mới. Các phiên cũ không khôi phục được.</td></tr>
+            <tr><td><code>Failed to start the systemd user session for 'root'</code></td><td>Cảnh báo khi chạy <code>wsl -u root</code></td><td>Không ảnh hưởng, bỏ qua.</td></tr>
+            <tr><td>Chương trình Windows báo "UNC paths are not supported"</td><td>Đang đứng trong thư mục Linux (<code>~</code>)</td><td><code>cd</code> sang <code>/mnt/c</code> hoặc <code>/mnt/d/…</code> trước khi chạy <code>.exe</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="bao-mat">
+      <h2>Bảo mật</h2>
+      <ul>
+        <li>Tailscale SSH chỉ nhận kết nối từ thiết bị trong tailnet đã đăng nhập tài khoản của bạn. Không có cổng nào mở ra Internet hay mạng LAN.</li>
+        <li>Không cần bật OpenSSH Server của Windows. Nếu đã bật, dừng nó (<code>Stop-Service sshd</code>, đặt Manual), hoặc giới hạn rule firewall cổng 22 chỉ cho dải Tailscale <code>100.64.0.0/10</code>.</li>
+        <li>Ai vào được WSL là chạy được chương trình dưới tài khoản Windows của bạn. Bảo vệ tài khoản Tailscale bằng xác thực hai lớp, và gỡ thiết bị cũ khỏi tailnet khi đổi điện thoại.</li>
+        <li>Mất điện thoại: vào <a href="https://login.tailscale.com/admin/machines" target="_blank" rel="noopener">login.tailscale.com/admin/machines</a>, xóa thiết bị đó ngay.</li>
+      </ul>
+    </section>
+
+    <footer>
+      Viết dựa trên lần dựng thực tế trên Windows 10 22H2 (máy join Azure AD), WSL 3.0.3, Ubuntu 26.04, Tailscale 1.104, herdr 0.9.5, Claude Code 2.1. Phím tắt và lệnh có thể đổi theo phiên bản.
+    </footer>
+  </main>
+</div>
+
+<script>
+document.querySelectorAll('.code button').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var code = btn.closest('.code').querySelector('pre code');
+    var text = code.innerText;
+    var done = function () { btn.textContent = 'Đã chép'; setTimeout(function () { btn.textContent = 'Sao chép'; }, 1600); };
+    var fallback = function () {
+      var range = document.createRange();
+      range.selectNodeContents(code);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      btn.textContent = 'Đã chọn, bấm Ctrl+C';
+    };
+    try {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } catch (e) { fallback(); }
+  });
+});
+</script>
+
+</body></html>
